@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spell It Right</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+            background-color: #95c4ed;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        button {
+            font-size: 18px;
+            margin: 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .word-container {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .letters-container {
+            margin-top: 20px;
+        }
+
+        .letters-container div {
+            display: inline-block;
+            padding: 10px;
+            background-color: lightblue;
+            cursor: grab;
+            margin: 5px;
+            font-size: 20px;
+            border-radius: 5px;
+        }
+
+        .blank {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border-bottom: 3px solid black;
+            font-size: 24px;
+            text-align: center;
+            margin: 0 5px;
+            vertical-align: middle;
+        }
+
+        p {
+            font-size: 18px;
+            color: #333;
+        }
+
+        #message {
+            font-weight: bold;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Spell It Right</h1>
+    <button onclick="startNewGame()">Start Game</button>
+    <div class="word-container" id="wordContainer"></div>
+    <div class="letters-container" id="lettersContainer"></div>
+    <button id="submitBtn" onclick="checkWord()" disabled>Submit</button>
+    <p id="message"></p>
+    <p id="score">Score: 0</p>
+    <p id="round">Round: 0/5</p>
+
+    <script>
+        const words = [
+            "FATHER", "MOTHER", "GARDEN", "BROTHER", "JOURNEY", "ROCKET", "BALANCE", "MISSION", "WINTERS", "VILLAGE", 
+            "FARMER", "HISTORY", "CAMPER", "PENCIL", "BOTTLE", "SUNRISE", "COLLEGE", "CIRCLE", "STATION", "DIWALI",
+            "OUTDOOR", "HEALTH", "FLIGHT", "MARKETING", "BUSINESS", "NAVARATRI",
+            "GOGGLES", "LAPTOP", "NAMASTE", "SPIDERMAN", "PARLIAMENT", "GIRLFRIEND"
+        ];
+        let score = 0;
+        let round = 0;
+        let usedWords = [];
+        let chosenWord = "";
+        let hiddenIndexes = [];
+
+        function startGame() {
+            if (round >= 5) {
+                document.getElementById("message").innerText = `Game Over! Final Score: ${score}`;
+                document.getElementById("submitBtn").style.display = "none";
+                return;
+            }
+            
+            round++;
+            document.getElementById("round").innerText = `Round: ${round}/5`;
+            document.getElementById("submitBtn").style.display = "inline-block"; // Show submit button
+
+            let availableWords = words.filter(word => !usedWords.includes(word));
+            if (availableWords.length === 0) return;
+            
+            chosenWord = availableWords[Math.floor(Math.random() * availableWords.length)].split("");
+            usedWords.push(chosenWord.join(""));
+
+            hiddenIndexes = [];
+            let displayedWord = chosenWord.slice();
+            
+            while (hiddenIndexes.length < 3) {
+                let randIndex = Math.floor(Math.random() * chosenWord.length);
+                if (!hiddenIndexes.includes(randIndex)) {
+                    hiddenIndexes.push(randIndex);
+                    displayedWord[randIndex] = "_";
+                }
+            }
+            hiddenIndexes.sort((a, b) => a - b);
+            
+            document.getElementById("wordContainer").innerHTML = displayedWord.map((char, i) => 
+                hiddenIndexes.includes(i) ? `<span class='blank' data-index='${hiddenIndexes.indexOf(i)}' ondrop='drop(event)' ondragover='allowDrop(event)'></span>` : char
+            ).join(" ");
+            
+            let extraLetters = [...hiddenIndexes.map(i => chosenWord[i])];
+            while (extraLetters.length < 5) {
+                let randLetter;
+                do {
+                    randLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+                } while (extraLetters.includes(randLetter));
+                extraLetters.push(randLetter);
+            }
+            extraLetters.sort(() => Math.random() - 0.5);
+            
+            document.getElementById("lettersContainer").innerHTML = "";
+            extraLetters.forEach(letter => {
+                let div = document.createElement("div");
+                div.innerText = letter;
+                div.className = "draggable";
+                div.draggable = true;
+                div.ondragstart = drag;
+                document.getElementById("lettersContainer").appendChild(div);
+            });
+            document.getElementById("submitBtn").disabled = false;
+        }
+        
+        function allowDrop(event) {
+            event.preventDefault();
+        }
+        
+        function drag(event) {
+            event.dataTransfer.setData("text", event.target.innerText);
+        }
+        
+        function drop(event) {
+            event.preventDefault();
+            let data = event.dataTransfer.getData("text");
+            event.target.innerText = data;
+        }
+        
+        function checkWord() {
+            let blanks = document.querySelectorAll(".blank");
+            let playerWord = Array.from(blanks).map(blank => blank.innerText.trim()).join("");
+            let correctWord = hiddenIndexes.map(i => chosenWord[i]).join("");
+
+            if (playerWord === correctWord) {
+                score += 10;
+                document.getElementById("message").innerText = `Correct! ✅`;
+            } else {
+                document.getElementById("message").innerText = `Incorrect! ❌ The correct word was: ${chosenWord.join("")}`;
+            }
+
+            document.getElementById("score").innerText = `Score: ${score}`;
+            setTimeout(startGame, 2000);
+        }
+        
+        function startNewGame() {
+            score = 0;
+            round = 0;
+            usedWords = [];
+            document.getElementById("score").innerText = `Score: ${score}`;
+            document.getElementById("message").innerText = "";
+            document.getElementById("submitBtn").style.display = "inline-block"; // Ensure submit button is visible again
+            startGame();
+        }
+    </script>
+</body>
+</html>
